@@ -105,45 +105,48 @@ var FSHADER_SOURCE =
 
 var main = function() {
 
-	var bacOnCanvas = 5; //num of bacteria allowed to be on canvas at once
-  var bacRemaining = 20; //total number of bacteria set to spawnBac
-  var bacAlive = 0; //bacteria currently alive
-  var poisonedBacteria = 0;
-	var bacterium = [];
-  var points = 0;
-  var particlesArray = [];
-  var thresholdCount = 0;
-  var continuous = false;
-  var gameOver = false;
+    var bacOnCanvas = 5; //num of bacteria allowed to be on canvas at once
+    var bacRemaining = 20; //total number of bacteria set to spawnBac
+    var bacAlive = 0; //bacteria currently alive
+    var poisonedBacteria = 0;
+    var bacterium = [];
+    var points = 0;
+    var particlesArray = [];
+    var thresholdCount = 0;
+    var light = true;
+    var gameOver = false;
+    var mousePressed = false;
+    var gameSurfaceOffset = 15;
+    var zAxis;
 
-  //Create main canvas
-  var canvas = document.getElementById('webgl');
+    //Create main canvas
+    var canvas = document.getElementById('webgl');
 
-  //Get the rendering context for WebGL
-  var gl = getWebGLContext(canvas);
-  if (!gl) {
-    console.log('Failed to get the rendering context for WebGL');
-    return;
-  }
+    //Get the rendering context for WebGL
+    var gl = getWebGLContext(canvas);
+    if (!gl) {
+        console.log('Failed to get the rendering context for WebGL');
+        return;
+    }
 
-  // store canvas dimentions
-  var gameWidth = canvas.width;
-  var gameHeight = canvas.height;
+    // store canvas dimentions
+    var gameWidth = canvas.width;
+    var gameHeight = canvas.height;
   
-  //Lighting location and colour
-  let lightPosition = vec3.fromValues(2.0, 2.0, 2.0);
-  let lightColour = vec3.fromValues(1.0, 1.0, 1.0);
+    //Lighting location and colour
+    let lightPosition = vec3.fromValues(2.0, 2.0, 2.0);
+    let lightColour = vec3.fromValues(1.0, 1.0, 1.0);
 
-  //Initialize shaders
-  if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
-    console.log('Failed to intialize shaders.');
-    return;
-  }
+    //Initialize shaders
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
+      console.log('Failed to intialize shaders.');
+      return;
+    }
 
-  //Set canvas colour
-  gl.clearColor(0, 0, 0, 0);
+    //Set canvas colour
+    gl.clearColor(0, 0, 0, 0);
 
-  gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST);
 
   //Uniforms and attributes to be used in following gl_environment initialization
   //Couldn't get it working using the .getUniform1f... etc 
@@ -170,37 +173,37 @@ var main = function() {
     "normal"
   ];
 
-  //Create GL Environment
-  //takes gl program, vertex shader, fragment shader, unfirom variables and attribute variables as arguments and create a webgl environment
-  let gl_env = new GLEnvironment(gl, VSHADER_SOURCE, FSHADER_SOURCE, uniforms, attributes);
+    //Create GL Environment
+    //takes gl program, vertex shader, fragment shader, unfirom variables and attribute variables as arguments and create a webgl environment
+    let gl_env = new GLEnvironment(gl, VSHADER_SOURCE, FSHADER_SOURCE, uniforms, attributes);
 
-  gl.useProgram(gl_env.shader);
+    gl.useProgram(gl_env.shader);
   
-  gl.uniform1f(gl_env.uniforms.one_colour, 0.0);
+    gl.uniform1f(gl_env.uniforms.one_colour, 0.0);
 
-  // Create centre sphere 
-  //Sphere(gl, depth/resolution)
-  let gameSurface = new Sphere(gl_env, 5);
-  gameSurface.buildModel();
-  gameSurface.createPointBuffer();
-  gameSurface.createIndexBuffer();
-  gameSurface.subdivide(gameSurface.depth);
-  gameSurface.createColourBuffer();
-  gameSurface.createNormalBuffer();
-  gameSurface.loadPointBuffer();
-  gameSurface.loadColourBuffer();
-  gameSurface.loadIndexBuffer();
-  gameSurface.loadNormalBuffer();
+    // Create centre sphere
+    //Sphere(gl, depth/resolution)
+    let gameSurface = new Sphere(gl_env, 5);
+    gameSurface.buildModel();
+    gameSurface.createPointBuffer();
+    gameSurface.createIndexBuffer();
+    gameSurface.subdivide(gameSurface.depth);
+    gameSurface.createColourBuffer();
+    gameSurface.createNormalBuffer();
+    gameSurface.loadPointBuffer();
+    gameSurface.loadColourBuffer();
+    gameSurface.loadIndexBuffer();
+    gameSurface.loadNormalBuffer();
 
-  // View matrix initialization
-  let viewMatrix = mat4.create();
-  mat4.lookAt(viewMatrix, [0.0, 0.0, 3.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]); //mat4(viewMatrix, [lookFrom], [lookAt], [up]) 
+    // View matrix initialization
+    let viewMatrix = mat4.create();
+    mat4.lookAt(viewMatrix, [0.0, 0.0, 3.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]); //mat4(viewMatrix, [lookFrom], [lookAt], [up])
 
-  //Projection matrix initialization
-  let projectionMatrix = mat4.create()
-  mat4.perspective(projectionMatrix, glMatrix.toRadian(60), gameWidth/gameHeight, 0.1, 100.0);
+    //Projection matrix initialization
+    let projectionMatrix = mat4.create()
+    mat4.perspective(projectionMatrix, glMatrix.toRadian(60), gameWidth/gameHeight, 0.1, 100.0);
 
-  // Create set of ids for the bacteria so we can keep track of them
+    // Create set of ids for the bacteria so we can keep track of them
   let bacIds = new Set();
   for (var i = 0; i < bacOnCanvas; i++) {
     bacIds.add(i+2); //modify addition integer to change how many spawnBac at a time
@@ -217,8 +220,15 @@ var main = function() {
     gl.uniformMatrix4fv(gl_env.uniforms.viewMatrix, false, viewMatrix);
     gl.uniformMatrix4fv(gl_env.uniforms.projectionMatrix, false, projectionMatrix);
     
-    gl.uniform3fv(gl_env.uniforms.light_point, lightPosition);
-    gl.uniform3fv(gl_env.uniforms.light_colour, lightColour);
+    if (light == true){
+        // set lighting on
+        gl.uniform3fv(gl_env.uniforms.light_point, lightPosition);
+        gl.uniform3fv(gl_env.uniforms.light_colour, lightColour);
+    } else {
+        // set lighting off
+        gl.uniform3fv(gl_env.uniforms.light_colour, [0.0, 0.0, 0.0]);
+    }
+    
 
     //call to drawSphere function in Sphere class
     gameSurface.drawSphere();
@@ -241,7 +251,7 @@ var main = function() {
     let radius = 0.05; //size of radius upon spawn
 
     //If bacterium length is less than the number of bacteria allowed on canvas, then spawn
-    if (bacterium.length < bacOnCanvas) {
+    if (bacterium.length < bacOnCanvas && gameOver == false && bacRemaining > 0) {
       //randomly select center
       let center = vec3.fromValues(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
       vec3.normalize(center, center);
@@ -290,28 +300,34 @@ var main = function() {
       
       if(bacteria.radius >= 0.35) {
         // LOSING CONDITION
+          thresholdCount++;
       }
     });
   }
 
   // play function
   function play() {
-
-    // set the game mode
-    document.getElementById("gameMode").addEventListener("click", function() {
-      // change to continuous spawnBacs
-      if(continuous == false && gameOver == false){
-          continuous = true;
-          // change button text
-          document.getElementById("gameMode").innerHTML = "Continuous";
-          // spawnBac up to max bacteria after game mode change
-          while (currBacNum < bacOnCanvas){
-              // create new bacteria
-              bacteria.push(new Bacteria());
-              bacteria[currBacNum].spawnBac();
-          }
-      }
-    });
+        
+        // detect when button was pressed
+        document.getElementById("lightingButton").onclick = function(event) {turnOnLight(event)};
+        
+        // function to turn lights on or off
+        function turnOnLight(event){
+            // trigger lighting
+            if(light == false){
+                light = true;
+                // update button text
+                document.getElementById("lightingButton").innerHTML = "Lighting On";
+                event.target.textContext = "On";
+            // turn off lights
+            } else {
+                light = false;
+                // update button text
+                document.getElementById("lightingButton").innerHTML = "Lighting Off";
+                event.target.textContext = "Off";
+            }
+        }
+    
 
     // set text values for points and bacteria posioned
     document.getElementById('pointsText').innerHTML = "Points: " + points;
@@ -320,9 +336,9 @@ var main = function() {
     // game over, two have reached threshold
     if(thresholdCount >= 2){
       // remove remaining bacteria
-      for (let b in bacteria){
-          bacteria.splice(b,1);
-          currBacNum--;
+      for (let b in bacterium){
+          bacterium.splice(b,1);
+          //currBacNum--;
       }
       
       document.getElementById('pointsText').innerHTML = "Final Score: " + points;
@@ -333,21 +349,243 @@ var main = function() {
     }
 
     // if the player wins set final text
-    if (poisonedBacteria == bacOnCanvas && continuous == false){
-      document.getElementById('pointsText').innerHTML = "Final Score: " + points;
-      document.getElementById('bactRemoved').innerHTML = "You Win!";
+    if (bacRemaining <= 0){
+        document.getElementById('pointsText').innerHTML = "Final Score: " + points;
+        document.getElementById('bactRemoved').innerHTML = "You Win!";
+        // remove last bacteria, game is over
+        for (let b in bacterium){
+            bacterium.splice(b,1);
+        }
     }
+        
     if(bacRemaining > 0 + bacAlive) {
-      spawnBac();
+        spawnBac();
     }
-      spawnBac();
-      grow();
-      drawSphere();
-      requestAnimationFrame(play);
+        // call request frames to spawn, move andf grow each frame
+        spawnBac();
+        grow();
+        drawSphere();
+        requestAnimationFrame(play);
     }
-  play();
+                   
+    play();
+                   
+// event handlers
+canvas.addEventListener("click", mouseClick());
+canvas.addEventListener("mouseup", mouseup());
+canvas.addEventListener("mousemove", mousemove());
+canvas.addEventListener("mousedown", mousedown());
+                     
+// disable right click menu (interferes with movement/blocks game)
+document.oncontextmenu = function() {
+    return false;
 }
 
+// mouse click to select bacterium
+function mouseClick(){
+    return function(event) {
+        
+    // get x and y values from mouse environment
+    var mouseX = event.clientX;
+    var mouseY = event.clientY;
+                       
+    var bactClicked = 0;
+    var rect = event.target.getBoundingClientRect() ;
+
+    // convert mouse click to canvas x and y values
+    mouseX = ((mouseX - rect.left) - gameWidth/2)/(gameWidth/2);
+    mouseY = (gameHeight/2 - (mouseY - rect.top))/(gameHeight/2);
+    
+               
+    // loop all bacteria currently on canvas
+    for (let z in bacterium){
+    //calculate distance between mouse and bacteria using diatance formula
+    //square root of: difference in x^2 + difference in y^2
+    var xSquared = (bacterium[z].x - mouseX)*(bacterium[z].x - mouseX);
+    var ySquared = (bacterium[z].y - mouseY)*(bacterium[z].y - mouseY);
+    var pointDistance = Math.sqrt(xSquared + ySquared);
+        
+        
+        
+        
+        // IF THERE WAS A MATCHED CLICK IT GOES IN THIS CONDIDION
+        if ((pointDistance - bacterium[z].radius) <= 0){
+                               
+                               
+            // tracker to see if bacteria is clicked
+            bactClicked = -1;
+                               
+            // call points function
+            gamePoints(bacterium[z].radius);
+                               
+            // increment counter
+            //poisonedBacteria++;
+                               
+            // kill bacteria
+            // remove from array
+            bacterium.splice(z,1);
+            bacRemaining--;
+            bacAlive--;
+
+                               
+            
+        }
+        
+    }
+                                                   
+    //TESTING ONLY REMOVE THIS BEFORE SUBMISSION
+    bacterium.splice(0,1);
+    bacRemaining--;
+    bacAlive--;
+                                           
+                                                   
+                                                   
+    // in this case a bacteria was not clicked so deduct points
+    if(bactClicked != -1){
+        points = points - 100;
+    }
+    }
+    }
+    // Calculate the game points
+    function gamePoints(bacteriaSize){
+    // calculate points recieved for each click, base is 120 but will recieve less for larger bacteria
+    points = points + (120 - Math.floor(bacteriaSize * 300));
+    }
+            
+    // mouse button is pressed down
+    function mousedown(event){
+        return function(event) {
+            // if there was a right click
+            if (event.button == 2){
+                mousePressed = true;
+                
+                // get mouse location, convert to canvas x and y values
+                var mouseX = event.clientX;
+                var mouseY = event.clientY;
+                var rect = event.target.getBoundingClientRect();
+                mouseX = mouseX - rect.left;
+                mouseY = mouseY - rect.top;
+                var pointX = mouseX - gameWidth/2;
+                var pointY = event.target.height - mouseY - gameHeight/2;
+                
+                // find point distance (distance formula SQRT(X^2 + Y^2))
+                var xSquared = pointX * pointX;
+                var ySquared = pointY * pointY;
+                var pointDistance = Math.sqrt(xSquared + ySquared);
+                // find radius on game sphere
+                var centerCircleradius = (gameWidth - gameSurfaceOffset) / 2.0;
+        
+        // mouse within bounds
+        if (pointDistance < centerCircleradius * centerCircleradius){
+            zAxis = Math.sqrt(centerCircleradius * centerCircleradius - pointDistance);
+        // out of bounds (no movement will occur by setting z to 0)
+        } else {
+            zAxis = 0;
+        }
+        // set starting position of game for mousemove function
+        gameSurface.startPosition = vec3.fromValues(pointX, pointY, zAxis);
+        vec3.normalize(gameSurface.startPosition, gameSurface.startPosition);
+        }
+        }
+        
+    }
+                  
+    // button was released
+    function mouseup(event){
+        return function(event) {
+            // prevent camera movement after the mouse button was released
+            if (mousePressed == true){
+                mousePressed = false;
+                // game screen cannot move if there is no starting position
+                gameSurface.startPosition = undefined;
+            }
+        }
+    }
+           
+    // cursor has moved
+    function mousemove(event){
+        return function(event) {
+            // runs only after mousedown has set mousePressed to true
+            // Stops running if button 2 is not pressed while moving and mouseup is called
+        if (event.button == 2 && mousePressed == true){
+
+            // get mouse location, convert to canvas x and y values
+            var mouseX = event.clientX;
+            var mouseY = event.clientY;
+            var rect = event.target.getBoundingClientRect();
+            mouseX = mouseX - rect.left;
+            mouseY = mouseY - rect.top;
+            var pointX = mouseX - gameWidth/2;
+            var pointY = event.target.height - mouseY - gameHeight/2;
+            
+            // find point distance (distance formula SQRT(X^2 + Y^2))
+            var xSquared = pointX * pointX;
+            var ySquared = pointY * pointY;
+            var pointDistance = Math.sqrt(xSquared + ySquared);
+            // find radius on game sphere
+            var centerCircleradius = (gameWidth - gameSurfaceOffset) / 2.0;
+            
+            // store a copy of the view matrix
+            gameSurface.tempViewMatrix = mat4.copy(mat4.create(), viewMatrix);
+
+            // movement within bounds
+            if (pointDistance < centerCircleradius * centerCircleradius){
+                zAxis = Math.sqrt(centerCircleradius * centerCircleradius - pointDistance);
+            // point out of bounds (no movement of game)
+            } else {
+                zAxis = 0;
+            }
+            
+            // set the frame resting position from mouse location
+            gameSurface.lastPosition = vec3.fromValues(pointX, pointY, zAxis);
+            vec3.normalize(gameSurface.lastPosition, gameSurface.lastPosition);
+            
+            // determine angle of camera movement
+            var angle = Math.acos(vec3.dot(gameSurface.startPosition, gameSurface.lastPosition));
+            // determine axis of movement (difference between and start)
+            var axisMovement = vec3.cross(vec3.create(), gameSurface.startPosition, gameSurface.lastPosition);
+            
+            if (vec3.equals(gameSurface.startPosition, gameSurface.lastPosition)) {
+                // transfer temporary viewmatrix to viewMatrix
+                mat4.copy(viewMatrix, gameSurface.tempViewMatrix);
+            // start and end positions are different, move camera around sphere
+            } else {
+                // matrix to store all movement for view (rotations and transformations)
+                var transformMatrix = mat4.create();
+                // matrix to store rotation of canvas view
+                var rotationMatrix = mat4.rotate(mat4.create(), mat4.create(), angle, axisMovement);
+                
+                // 3.0 so camera position fixed to center sphere, increase/decrease to move away from/closer to sphere
+                var transPosZ = mat4.translate(mat4.create(), mat4.create(), vec3.fromValues(0.0, 0.0, 3.0));
+                var transNegZ = mat4.translate(mat4.create(), mat4.create(), vec3.fromValues(0.0, 0.0, -3.0));
+
+                // translate
+                mat4.mul(transformMatrix, transPosZ, transformMatrix);
+                // rotate
+                mat4.mul(transformMatrix, rotationMatrix, transformMatrix);
+                // translate
+                mat4.mul(transformMatrix, transNegZ, transformMatrix);
+                // store new position in viewMatrix (what the user will see) from old viewMatrix and transfomations
+                mat4.mul(viewMatrix, transformMatrix, gameSurface.tempViewMatrix);
+                // set the starting position for next frame as previous ending position
+                gameSurface.startPosition = gameSurface.lastPosition;
+  
+            }
+        }
+        }
+    }
+                                     
+
+                   
+}
+ 
+                                                   
+                                                   
+                                                   
+                                                   
+                                                   
+                                                   
+                                                   
 class Sphere {
   constructor(gl_env, depth, center, radius, colourStart, colourStop, 
     colourAmbient, colourDiffuse, colourSpecular) {
