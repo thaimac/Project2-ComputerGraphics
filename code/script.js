@@ -555,7 +555,8 @@ var main = function() {
         return function(event){
             // runs only after mousedown has set mousePressed to true
             // Stops running if button 2 is not pressed while moving and mouseup is called
-            if (event.button == 2 && mousePressed == true){
+            // TESTED TO WORK ON CHROME AND SAFARI
+            if ((event.buttons & 2) == 2 && mousePressed == true){
 
                 // get mouse location, convert to canvas x and y values
                 var mouseX = event.clientX;
