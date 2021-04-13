@@ -626,14 +626,11 @@ var main = function() {
 // end of main
 }
  
-                                                   
-                                                   
-                                                   
-                                                   
-                                                   
-                                                   
+                                             
 // used for drawing all spheres on the canvas
 class Sphere {
+
+    //Constructor to store all attributes of a Sphere instance 
     constructor(gl_env, depth, center, radius, colourStart, colourStop, colourAmbient, colourDiffuse, colourSpecular) {
         this.gl_env = gl_env;
         this.depth = depth;
@@ -652,7 +649,8 @@ class Sphere {
         this.rotation = mat4.create();
         this.id = 0;
         this.consuming = [];
-
+        
+        //Handle cases if depth is undefined or radius is defined 
         if (depth === undefined) depth = 5;
         if (radius !== undefined) vec3.set(this.scale, radius, radius, radius);
 
@@ -670,18 +668,24 @@ class Sphere {
         this.colour_specular = colourSpecular;
     }
     
+    //Function used to build the model of the sphere 
     buildModel() {
         this.model = mat4.create();
+        //translates the model by 'translation' found in constructor
         mat4.translate(this.model, this.model, this.translation);
+        //scales the model by the 'scale' found in the constructor
         mat4.scale(this.model, this.model, this.scale);
+        //multiplies model by rotation and assings this to model 
         mat4.mul(this.model, this.model, this.rotation);
     }
 
+    //Function used to create the point buffer
     createPointBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
         var gl_buffer = gl.createBuffer();
 
+        //Buffer that provides the Sphere instance with a symmetrical, spherical shape
         var buffer = [
         sphere_vector(0.0, 0.0),
         sphere_vector(0.0, Math.acos(-1.0/3.0)),
@@ -689,68 +693,85 @@ class Sphere {
         sphere_vector(4.0 * Math.PI / 3.0, Math.acos(-1.0/3.0)),
         ];
 
+        //Add the buffer created above to the buffers variable initialized in the constructor
         this.buffers.points = {
             gl_buffer: gl_buffer,
             buffer: buffer
         }
     }
 
+    //Function that will load the point buffer created in the previous function 
     loadPointBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
-
+        
+        //Bind our gl buffer created in the previous function to GL's ARRAY_BUFFER
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.points.gl_buffer);
+        //Provide our ARARY_BUFFER with the sphere_vector points created in the previous function 
         gl.bufferData(gl.ARRAY_BUFFER, gl_vector_list(this.buffers.points.buffer), gl.STATIC_DRAW);
     }
 
+    //Function used to create colour buffer
     createColourBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
         var gl_buffer = gl.createBuffer();
 
-        var colour_norm = vec4.fromValues(0.0, 0.0, 1.0, 0.0);
+        var colourNorm = vec4.fromValues(0.0, 0.0, 1.0, 0.0);
 
-        var colour_difference = vec4.sub(vec4.create(), this.colour_stop, this.colour_start);
-
-        var colour_matrix = mat4.create();
+        var colourDifference = vec4.sub(vec4.create(), this.colour_stop, this.colour_start);
+        
+        //matrix to hold the colour
+        var colourMatrix = mat4.create();
+        //Loop to populate colourMatrix 3 values at a time 
         for (var i = 0; i < 3; i++){
-            colour_matrix[0 + i * 4] = colour_difference[0] * colour_norm[i];
-            colour_matrix[1 + i * 4] = colour_difference[1] * colour_norm[i];
-            colour_matrix[2 + i * 4] = colour_difference[2] * colour_norm[i];
+            colourMatrix[0 + i * 4] = colourDifference[0] * colourNorm[i];
+            colourMatrix[1 + i * 4] = colourDifference[1] * colourNorm[i];
+            colourMatrix[2 + i * 4] = colourDifference[2] * colourNorm[i];
         }
 
-        colour_matrix[12] = this.colour_start[0];
-        colour_matrix[13] = this.colour_start[1];
-        colour_matrix[14] = this.colour_start[2];
+        colourMatrix[12] = this.colour_start[0];
+        colourMatrix[13] = this.colour_start[1];
+        colourMatrix[14] = this.colour_start[2];
 
         var m = mat4.create()
-
+        
+        //Scale m by the final argument
         mat4.scale(m, m , [0.5, 0.5, 0.5]);
+        //Translate m by the final argument
         mat4.translate(m, m, [1.0, 1.0, 1.0]);
-        mat4.mul(colour_matrix, colour_matrix, m);
+        //multiply colourMatrix by m and assign it to colourMatrix
+        mat4.mul(colourMatrix, colourMatrix, m);
 
         var buffer = [];
-
+        
+        //Loop through each point in the point buffer and assign it a point by pushing its colour into the points buffer
         this.buffers.points.buffer.forEach(function(point) {
             var colour = vec4.create();
-            vec4.transformMat4(colour, point, colour_matrix);
+            //transform colour with colourMatrix
+            vec4.transformMat4(colour, point, colourMatrix);
 
             buffer.push(colour);
       }, this);
 
+        //Include the recently created colour buffer into our environment
         this.buffers.colours = {
             gl_buffer: gl_buffer,
             buffer: buffer
         }
     }
     
+    //Function used to load colour buffer
     loadColourBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
+        //bind colour buffer to our ARRAY_BUFFER
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.colours.gl_buffer);
+        //provide the buffer with our colour data 
         gl.bufferData(gl.ARRAY_BUFFER, gl_vector_list(this.buffers.colours.buffer), gl.STATIC_DRAW);
     }
 
+    //Function used to create an index buffer
     createIndexBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
@@ -769,14 +790,18 @@ class Sphere {
         }
     }
 
+    //Function used to load the index buffer
     loadIndexBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
 
+        //Bind index buffer to ELEMENT_ARRAY_BUFFER
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.indices.gl_buffer);
+        //Provide buffer with the indices that we pushed when creating the index buffer
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.buffers.indices.buffer), gl.STATIC_DRAW);
     }
 
+    //Function used to create normal buffer
     createNormalBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
@@ -784,6 +809,7 @@ class Sphere {
         var gl_buffer = gl.createBuffer();
         var buffer = [];
 
+        //clone the contents of the points buffer and save them in the normal buffer
         this.buffers.points.buffer.forEach(function(point){
             buffer.push(vec3.clone(point));
         }, this);
@@ -794,28 +820,36 @@ class Sphere {
         };
     }
 
+    //Load normal buffer
     loadNormalBuffer() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
 
+        //Bind normal buffer to ARRAY_BUFFER
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.normals.gl_buffer);
+        //Provide buffer with the data within normal buffer
         gl.bufferData(gl.ARRAY_BUFFER, gl_vector3_list(this.buffers.normals.buffer), gl.STATIC_DRAW);
     }
 
     subdivide = function(depth) {
+        //If no depth, no need to subdivide as 3D would not be wanted
         if (depth == 0) return;
 
+        //assign our points and indices to local variables
         var points = this.buffers.points.buffer;
         var indices = this.buffers.indices.buffer;
 
         var new_points = new Map();
 
         function get_index(a, b) {
+            //If points already exist, then return them
             if (new_points.has([a, b])) {
                 return new_points.get([a, b]);
+            //else 
             } else {
                 var vec = vec4.create()
                 vec[3] = 1.0;
+                //linearly interpolate vec, points[a] and points[b] by a factor of 0.5
                 vec3.lerp(vec, points[a], points[b], 0.5);
                 vec3.normalize(vec, vec);
 
@@ -831,16 +865,19 @@ class Sphere {
 
         var new_indices = [];
 
+        //loop to get each set of indices 
         for(var i = 0; i < indices.length; i += 3) {
 
             var a = indices[i + 0];
             var b = indices[i + 1];
             var c = indices[i + 2];
-
+            
+            //Get the index of the connections between each set of points
             var ab = get_index(a, b);
             var bc = get_index(b, c);
             var ca = get_index(c, a);
 
+            //Push connections between each set of indices into the new_indices map
             new_indices.push(a, ab, ca);
             new_indices.push(b, bc, ab);
             new_indices.push(c, ca, bc);
@@ -853,18 +890,19 @@ class Sphere {
         
     }
 
+    //Function that takes all the buffers created in the previous functions and draws the sphere
     drawSphere = function() {
         var gl_env = this.gl_env;
         var gl = gl_env.gl;
 
+        //Get uniform variables
         gl.uniform1f(gl_env.uniforms.light_ambient, this.colour_ambient);
         gl.uniform1f(gl_env.uniforms.light_diffuse, this.colour_diffuse);
         gl.uniform1f(gl_env.uniforms.light_specular, this.colour_specular);
-
         gl.uniform4fv(gl_env.uniforms.single_colour, vec4.fromValues(Math.random * 255, Math.random * 255, Math.random * 255, 1.0));
-
         gl.uniformMatrix4fv(gl_env.uniforms.modelMatrix, false, new Float32Array(this.model));
 
+        //Bind buffers to ARRAY_BUFFER and binds each to a vertex attribute 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.points.gl_buffer);
         gl.vertexAttribPointer(gl_env.attributes.point, 4, gl.FLOAT, false, 0, 0);
 
@@ -875,6 +913,8 @@ class Sphere {
         gl.vertexAttribPointer(gl_env.attributes.normal, 3, gl.FLOAT, false, 0, 0);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffers.indices.gl_buffer);
+
+        //Draw
         gl.drawElements(gl.TRIANGLES, this.buffers.indices.buffer.length, gl.UNSIGNED_SHORT, 0);
     }
 // end of sphere
